@@ -85,7 +85,6 @@ void Main_App(void) {
     printf("\r\n==== HE THONG DO NO2 TỰ ĐỘNG ====\r\n");
 
     /* 1. Khởi tạo LCD 1602 */
-    // Lưu ý: Đa số module PCF8574 có địa chỉ 0x4E (dịch trái của 0x27) hoặc 0x7E (của 0x3F)
     CLCD_I2C_Init(&lcd1, &hi2c1, 0x4E, 16, 2);
     CLCD_I2C_Clear(&lcd1);
     CLCD_I2C_SetCursor(&lcd1, 0, 0);
@@ -115,6 +114,10 @@ void Main_App(void) {
 
     currentState = STATE_IDLE;
     CLCD_I2C_Clear(&lcd1);
+    CLCD_I2C_SetCursor(&lcd1, 0, 0);
+    CLCD_I2C_WriteString(&lcd1, "He Thong SanSang");
+    CLCD_I2C_SetCursor(&lcd1, 0, 1);
+    CLCD_I2C_WriteString(&lcd1, "Nhan nut START..");
 
     /* VÒNG LẶP CHÍNH MÁY TRẠNG THÁI (NON-BLOCKING) */
     while (1) {
@@ -127,24 +130,32 @@ void Main_App(void) {
         switch (currentState) {
 
             case STATE_IDLE:
-                CLCD_I2C_SetCursor(&lcd1, 0, 0);
-                CLCD_I2C_WriteString(&lcd1, "He Thong SanSang");
-                CLCD_I2C_SetCursor(&lcd1, 0, 1);
-                CLCD_I2C_WriteString(&lcd1, "Nhan nut START..");
-
                 // Kích hoạt chu trình khi nhấn nút ở chân PE7
                 if (HAL_GPIO_ReadPin(BTN_START_GPIO_Port, BTN_START_Pin) == GPIO_PIN_RESET) {
                     HAL_Delay(50); // Chống dội phím
-                    while(HAL_GPIO_ReadPin(BTN_START_GPIO_Port, BTN_START_Pin) == GPIO_PIN_RESET);
+                    
+                    uint32_t btn_timeout = HAL_GetTick();
+                    uint8_t is_valid = 1;
+                    
+                    // Thêm Timeout 3 giây chống kẹt do nhiễu EMI
+                    while(HAL_GPIO_ReadPin(BTN_START_GPIO_Port, BTN_START_Pin) == GPIO_PIN_RESET) {
+                        if (HAL_GetTick() - btn_timeout > 3000) {
+                            is_valid = 0; // Đánh dấu là lỗi kẹt phím
+                            break;        // Tự thoát vòng lặp tử thần
+                        }
+                    }
 
-                    CLCD_I2C_Clear(&lcd1);
-                    CLCD_I2C_SetCursor(&lcd1, 0, 0);
-                    CLCD_I2C_WriteString(&lcd1, "1. Bom mau nuoc");
-                    printf("=> B1: Bom 5ml nuoc vao cuvet...\r\n");
+                    // Chỉ tiếp tục nếu không bị kẹt
+                    if (is_valid) {
+                        CLCD_I2C_Clear(&lcd1);
+                        CLCD_I2C_SetCursor(&lcd1, 0, 0);
+                        CLCD_I2C_WriteString(&lcd1, "1. Bom mau nuoc");
+                        printf("=> B1: Bom 5ml nuoc vao cuvet...\r\n");
 
-                    Pump_Water_In(true);
-                    state_timer = HAL_GetTick();
-                    currentState = STATE_PUMP_IN;
+                        Pump_Water_In(true);
+                        state_timer = HAL_GetTick();
+                        currentState = STATE_PUMP_IN;
+                    }
                 }
                 break;
 
@@ -167,12 +178,18 @@ void Main_App(void) {
                 break;
 
             case STATE_DROP_1:
+            {
                 // Hiển thị số giọt realtime lên LCD
-                sprintf(lcd_buf, "Giot: %d/3      ", count_drop_1);
-                CLCD_I2C_SetCursor(&lcd1, 0, 1);
-                CLCD_I2C_WriteString(&lcd1, lcd_buf);
+                static int last_drop_1 = -1;
+                if (last_drop_1 != count_drop_1) {
+                    last_drop_1 = count_drop_1;
+                    sprintf(lcd_buf, "Giot: %d/3      ", count_drop_1);
+                    CLCD_I2C_SetCursor(&lcd1, 0, 1);
+                    CLCD_I2C_WriteString(&lcd1, lcd_buf);
+                }
 
                 if (count_drop_1 >= 3) {
+                    last_drop_1 = -1; // Reset cho lan sau
                     Pump_Reagent_1(false); // Tắt bơm lọ 1
                     Reset_Drop_Counters();
 
@@ -186,18 +203,26 @@ void Main_App(void) {
                 }
                 // Timeout chống tắc ống
                 else if (HAL_GetTick() - timeout_timer > 20000) {
+                    last_drop_1 = -1; // Reset khi thoat ra ngoai
                     Pump_Reagent_1(false);
                     printf("WARN: Timeout Lo 1! Huy chu trinh.\r\n");
                     currentState = STATE_PUMP_OUT; // Ép xả nước
                 }
                 break;
+            }
 
             case STATE_DROP_2:
-                sprintf(lcd_buf, "Giot: %d/3      ", count_drop_2);
-                CLCD_I2C_SetCursor(&lcd1, 0, 1);
-                CLCD_I2C_WriteString(&lcd1, lcd_buf);
+            {
+                static int last_drop_2 = -1;
+                if (last_drop_2 != count_drop_2) {
+                    last_drop_2 = count_drop_2;
+                    sprintf(lcd_buf, "Giot: %d/3      ", count_drop_2);
+                    CLCD_I2C_SetCursor(&lcd1, 0, 1);
+                    CLCD_I2C_WriteString(&lcd1, lcd_buf);
+                }
 
                 if (count_drop_2 >= 3) {
+                    last_drop_2 = -1; // Reset cho lan sau
                     Pump_Reagent_2(false);
 
                     CLCD_I2C_Clear(&lcd1);
@@ -210,20 +235,27 @@ void Main_App(void) {
                     currentState = STATE_STIR_WAIT;
                 }
                 else if (HAL_GetTick() - timeout_timer > 20000) {
+                    last_drop_2 = -1; // Reset
                     Pump_Reagent_2(false);
                     printf("WARN: Timeout Lo 2! Huy chu trinh.\r\n");
                     currentState = STATE_PUMP_OUT;
                 }
                 break;
+            }
 
             case STATE_STIR_WAIT:
             {    // Cập nhật LCD đếm lùi (Mô phỏng chờ 10 giây, thực tế đổi thành 300000ms)
                 uint32_t elapsed_sec = (HAL_GetTick() - state_timer) / 1000;
-                sprintf(lcd_buf, "Cho: %us/10s  ", (unsigned int)elapsed_sec);
-                CLCD_I2C_SetCursor(&lcd1, 0, 1);
-                CLCD_I2C_WriteString(&lcd1, lcd_buf);
+                static uint32_t last_elapsed_sec = 999;
+                if (last_elapsed_sec != elapsed_sec) {
+                    last_elapsed_sec = elapsed_sec;
+                    sprintf(lcd_buf, "Cho: %us/10s  ", (unsigned int)elapsed_sec);
+                    CLCD_I2C_SetCursor(&lcd1, 0, 1);
+                    CLCD_I2C_WriteString(&lcd1, lcd_buf);
+                }
 
                 if (HAL_GetTick() - state_timer >= 10000) { // Đợi 10 giây
+                    last_elapsed_sec = 999; // Reset cho lan sau
                     Stirrer_Enable(false); // Ngắt động cơ bước
 
                     CLCD_I2C_Clear(&lcd1);
@@ -294,6 +326,10 @@ void Main_App(void) {
                     HAL_Delay(2000);
 
                     CLCD_I2C_Clear(&lcd1);
+                    CLCD_I2C_SetCursor(&lcd1, 0, 0);
+                    CLCD_I2C_WriteString(&lcd1, "He Thong SanSang");
+                    CLCD_I2C_SetCursor(&lcd1, 0, 1);
+                    CLCD_I2C_WriteString(&lcd1, "Nhan nut START..");
                     currentState = STATE_IDLE; // Quay về vạch xuất phát
                 }
                 break;
