@@ -1,4 +1,5 @@
 "./Core/Src/app_main.o"
+"./Core/Src/app_test.o"
 "./Core/Src/as7341.o"
 "./Core/Src/lcd_i2c.o"
 "./Core/Src/main.o"

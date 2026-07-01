@@ -49,6 +49,8 @@ extern "C" {
 
 /* USER CODE END EM */
 
+void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
+
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);
 
@@ -83,6 +85,11 @@ void Error_Handler(void);
 #define BOM_XA_GPIO_Port GPIOD
 
 /* USER CODE BEGIN Private defines */
+
+/* LED đo màu — TIM2 CH3 (PA2), f_PWM = 10kHz, ARR = 99
+ * Duty cycle = Pulse / (ARR + 1) * 100% */
+#define LED_PWM_ON   80U   /* 80% — đủ sáng để đo quang phổ */
+#define LED_PWM_OFF   0U   /* 0%  — tắt hoàn toàn            */
 
 /* USER CODE END Private defines */
 

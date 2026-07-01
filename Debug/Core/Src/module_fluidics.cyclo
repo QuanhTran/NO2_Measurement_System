@@ -1,6 +1,7 @@
-../Core/Src/module_fluidics.cpp:12:6:void Pump_Water_In(bool)	2
-../Core/Src/module_fluidics.cpp:17:6:void Pump_Reagent_1(bool)	2
-../Core/Src/module_fluidics.cpp:22:6:void Pump_Reagent_2(bool)	2
-../Core/Src/module_fluidics.cpp:27:6:void Pump_Water_Out(bool)	2
-../Core/Src/module_fluidics.cpp:32:6:void Reset_Drop_Counters()	1
-../Core/Src/module_fluidics.cpp:38:17:void HAL_GPIO_EXTI_Callback(uint16_t)	3
+../Core/Src/module_fluidics.cpp:35:6:void Pump_Water_In(bool)	3
+../Core/Src/module_fluidics.cpp:43:6:void Pump_Water_Out(bool)	3
+../Core/Src/module_fluidics.cpp:54:6:void Pump_Reagent_1(bool)	3
+../Core/Src/module_fluidics.cpp:62:6:void Pump_Reagent_2(bool)	3
+../Core/Src/module_fluidics.cpp:71:6:void Reset_Drop_Counters()	1
+../Core/Src/module_fluidics.cpp:77:6:void Pump_System_TIM6_Callback()	13
+../Core/Src/module_fluidics.cpp:120:17:void HAL_GPIO_EXTI_Callback(uint16_t)	3

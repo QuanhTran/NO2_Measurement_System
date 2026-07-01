@@ -1,6 +1,6 @@
 D:\Download Apps\STM32CubeIDE_1.16.1\STM32CubeIDE\plugins\com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.12.3.rel1.win32_1.0.200.202406191623\tools\bin/../lib/gcc/arm-none-eabi/12.3.1/../../../../arm-none-eabi/include/c++/12.3.1/cmath:463:3:constexpr float std::sqrt(float)	1
-../Core/Src/app_main.cpp:44:7:float Tinh_Nong_Do_NO2(uint16_t, uint16_t, uint16_t, uint16_t)	4
-../Core/Src/app_main.cpp:84:6:void Main_App()	20
-../Core/Src/app_main.cpp:301:1:void __static_initialization_and_destruction_0(int, int)	5
-../Core/Src/app_main.cpp:301:1:cpp)	1
-../Core/Src/app_main.cpp:301:1:cpp)	1
+../Core/Src/app_main.cpp:45:7:float Tinh_Nong_Do_NO2(uint16_t, uint16_t, uint16_t, uint16_t)	4
+../Core/Src/app_main.cpp:91:6:void Main_App()	46
+../Core/Src/app_main.cpp:507:1:void __static_initialization_and_destruction_0(int, int)	5
+../Core/Src/app_main.cpp:507:1:cpp)	1
+../Core/Src/app_main.cpp:507:1:cpp)	1
