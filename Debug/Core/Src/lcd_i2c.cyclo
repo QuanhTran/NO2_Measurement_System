@@ -10,3 +10,4 @@
 ../Core/Src/lcd_i2c.c:137:6:CLCD_I2C_CursorOff	1
 ../Core/Src/lcd_i2c.c:142:6:CLCD_I2C_BlinkOn	1
 ../Core/Src/lcd_i2c.c:147:6:CLCD_I2C_BlinkOff	1
+../Core/Src/lcd_i2c.c:160:6:CLCD_I2C_ForceReset	5

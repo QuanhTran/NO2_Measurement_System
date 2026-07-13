@@ -79,16 +79,16 @@ void Error_Handler(void);
 #define BOM_CAP_GPIO_Port GPIOD
 #define LO_1_Pin GPIO_PIN_4
 #define LO_1_GPIO_Port GPIOD
-#define LO_2_Pin GPIO_PIN_5
-#define LO_2_GPIO_Port GPIOD
-#define BOM_XA_Pin GPIO_PIN_6
+#define BOM_XA_Pin GPIO_PIN_5
 #define BOM_XA_GPIO_Port GPIOD
+#define LO_2_Pin GPIO_PIN_6
+#define LO_2_GPIO_Port GPIOD
 
 /* USER CODE BEGIN Private defines */
 
 /* LED đo màu — TIM2 CH3 (PA2), f_PWM = 10kHz, ARR = 99
  * Duty cycle = Pulse / (ARR + 1) * 100% */
-#define LED_PWM_ON   80U   /* 80% — đủ sáng để đo quang phổ */
+#define LED_PWM_ON   40U   /* 40% — Vừa đủ sáng, không làm mù cảm biến */
 #define LED_PWM_OFF   0U   /* 0%  — tắt hoàn toàn            */
 
 /* USER CODE END Private defines */

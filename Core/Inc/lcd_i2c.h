@@ -80,6 +80,7 @@ void CLCD_I2C_CursorOn(CLCD_I2C_Name* LCD);
 void CLCD_I2C_CursorOff(CLCD_I2C_Name* LCD);
 void CLCD_I2C_BlinkOn(CLCD_I2C_Name* LCD);
 void CLCD_I2C_BlinkOff(CLCD_I2C_Name* LCD);
+void CLCD_I2C_ForceReset(CLCD_I2C_Name* LCD);
 void I2C_LCD_setCursor(uint8_t col, uint8_t row);
 void I2C_LCD_SendString(char *str);
 

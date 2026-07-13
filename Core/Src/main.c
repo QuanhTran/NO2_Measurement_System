@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include "app_main.h"
 #include "app_test.h"
+#include "app_test_as7341.h"
 #include "module_fluidics.h"  // Cần để gọi Pump_Peristaltic_TIM6_Callback
 /* USER CODE END Includes */
 
@@ -45,6 +46,8 @@
 I2C_HandleTypeDef hi2c1;
 I2C_HandleTypeDef hi2c2;
 
+IWDG_HandleTypeDef hiwdg;
+
 TIM_HandleTypeDef htim2;
 TIM_HandleTypeDef htim6;
 
@@ -59,8 +62,9 @@ static void MX_I2C1_Init(void);
 static void MX_I2C2_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_TIM6_Init(void);
+static void MX_IWDG_Init(void);
 /* USER CODE BEGIN PFP */
-
+static void MX_IWDG_Init(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -101,6 +105,7 @@ int main(void)
   MX_I2C2_Init();
   MX_TIM2_Init();
   MX_TIM6_Init();
+  MX_IWDG_Init();
   /* USER CODE BEGIN 2 */
   // Bật TIM6 interrupt (tick 1ms) cho engine software PWM bơm nhu động
   HAL_TIM_Base_Start_IT(&htim6);
@@ -108,10 +113,18 @@ int main(void)
   // Bật TIM2 CH3 PWM (PA2, 10kHz) cho LED đo màu — khởi đầu duty = 0 (tắt)
   HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_3);
 
-  // Uncomment dòng dưới đây (bỏ dấu //) để chuyển sang luồng Test
+  // Khởi tạo IWDG Watchdog
+#ifndef DEBUG
+  MX_IWDG_Init();
+#endif
+
+  // Uncomment MỘT TRONG CÁC dòng dưới đây để chuyển sang luồng Test tương ứng
   //#define USE_TEST_APP
+  //#define USE_TEST_AS7341_APP
   
-#ifdef USE_TEST_APP
+#if defined(USE_TEST_AS7341_APP)
+  Test_AS7341_App();
+#elif defined(USE_TEST_APP)
   Test_App();
 #else
   Main_App();
@@ -146,9 +159,10 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLM = 8;
@@ -240,6 +254,41 @@ static void MX_I2C2_Init(void)
   /* USER CODE BEGIN I2C2_Init 2 */
 
   /* USER CODE END I2C2_Init 2 */
+
+}
+
+/**
+  * @brief IWDG Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_IWDG_Init(void)
+{
+
+  /* USER CODE BEGIN IWDG_Init 0 */
+
+  /* USER CODE END IWDG_Init 0 */
+
+  /* USER CODE BEGIN IWDG_Init 1 */
+
+  /* USER CODE END IWDG_Init 1 */
+  hiwdg.Instance = IWDG;
+  hiwdg.Init.Prescaler = IWDG_PRESCALER_4;
+  hiwdg.Init.Reload = 4095;
+  if (HAL_IWDG_Init(&hiwdg) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN IWDG_Init 2 */
+  // Ghi đè cấu hình để có timeout 4 giây
+  // LSI = 32kHz, Prescaler = 128 → tick = 4ms. Reload = 1000 → 4 giây
+  hiwdg.Init.Prescaler = IWDG_PRESCALER_128;
+  hiwdg.Init.Reload = 1000;
+  if (HAL_IWDG_Init(&hiwdg) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE END IWDG_Init 2 */
 
 }
 
@@ -363,11 +412,11 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(STEP_PIN_GPIO_Port, STEP_PIN_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(DIR_PIN_GPIO_Port, DIR_PIN_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOD, DIR_PIN_Pin|BOM_CAP_Pin|LO_1_Pin|BOM_XA_Pin
+                          |LO_2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, EN_PIN_Pin|BOM_CAP_Pin|LO_1_Pin|LO_2_Pin
-                          |BOM_XA_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(EN_PIN_GPIO_Port, EN_PIN_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pin : Drop_sen2_Pin */
   GPIO_InitStruct.Pin = Drop_sen2_Pin;
@@ -395,22 +444,28 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(STEP_PIN_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : DIR_PIN_Pin EN_PIN_Pin BOM_CAP_Pin LO_1_Pin
-                           LO_2_Pin BOM_XA_Pin */
+                           BOM_XA_Pin LO_2_Pin */
   GPIO_InitStruct.Pin = DIR_PIN_Pin|EN_PIN_Pin|BOM_CAP_Pin|LO_1_Pin
-                          |LO_2_Pin|BOM_XA_Pin;
+                          |BOM_XA_Pin|LO_2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 2, 0);
   HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 
-  HAL_NVIC_SetPriority(EXTI2_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(EXTI2_IRQn, 2, 0);
   HAL_NVIC_EnableIRQ(EXTI2_IRQn);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
+  /* AN TOÀN KÉP: Ép tắt tất cả bơm ngay sau khi GPIO init xong.
+     Đề phòng CubeMX regenerate đè lại mức khởi tạo ở trên. */
+  HAL_GPIO_WritePin(BOM_CAP_GPIO_Port, BOM_CAP_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(BOM_XA_GPIO_Port,  BOM_XA_Pin,  GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LO_1_GPIO_Port,    LO_1_Pin,    GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LO_2_GPIO_Port,    LO_2_Pin,    GPIO_PIN_RESET);
 /* USER CODE END MX_GPIO_Init_2 */
 }
 

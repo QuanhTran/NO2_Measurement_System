@@ -21,6 +21,8 @@
 //#include "cmsis_os2.h"
 //#include "captivate_config.h"
 
+extern "C" IWDG_HandleTypeDef hiwdg; // Khai báo IWDG
+
 /**
  * @brief Construct a new Adafruit_AS7341::Adafruit_AS7341 object
  *
@@ -122,14 +124,24 @@ bool Adafruit_AS7341::readAllChannels(uint16_t *readings_buffer) {
 
 	setSMUXLowChannels(true);        // Configure SMUX to read low channels
 	enableSpectralMeasurement(true); // Start integration
-	delayForData(0);                 // I'll wait for you for all time
+	delayForData(3000);              // Timeout 3s thay vì chờ vô hạn
+
+	// Kiểm tra data ready sau khi chờ — nếu timeout thì return false
+	if (!getIsDataReady()) {
+		return false;
+	}
 
 	bool low_success = readRegister(AS7341_CH0_DATA_L, (uint8_t*) readings_buffer,
 			12);
 
 	setSMUXLowChannels(false);       // Configure SMUX to read high channels
 	enableSpectralMeasurement(true); // Start integration
-	delayForData(0);                 // I'll wait for you for all time
+	delayForData(3000);              // Timeout 3s thay vì chờ vô hạn
+
+	// Kiểm tra data ready sau khi chờ — nếu timeout thì return false
+	if (!getIsDataReady()) {
+		return false;
+	}
 
 	return low_success
 			&& readRegister(AS7341_CH0_DATA_L, (uint8_t*) &readings_buffer[6], 12);
@@ -213,6 +225,7 @@ void Adafruit_AS7341::delayForData(uint32_t waitTime) {
 		while (!getIsDataReady()) {
 			////osSemaphoreRelease(messageI2C1_LockHandle);
 			HAL_Delay(1); // SF 2020-08-12 Does this really need to be so long?
+			HAL_IWDG_Refresh(&hiwdg);
 			//osSemaphoreAcquire(messageI2C1_LockHandle, osWaitForever);
 
 		}
@@ -224,6 +237,7 @@ void Adafruit_AS7341::delayForData(uint32_t waitTime) {
 		while ((!getIsDataReady()) && (elapsedMillis < waitTime)) {
 			////osSemaphoreRelease(messageI2C1_LockHandle);
 			HAL_Delay(1); // SF 2020-08-12 Does this really need to be so long?
+			HAL_IWDG_Refresh(&hiwdg);
 			//osSemaphoreAcquire(messageI2C1_LockHandle, osWaitForever);
 			elapsedMillis++;
 		}
@@ -297,6 +311,7 @@ bool Adafruit_AS7341::enableSMUX(void) {
 	while (checkRegisterBit(AS7341_ENABLE, 4) && count < timeOut) {
 		////osSemaphoreRelease(messageI2C1_LockHandle);
 		HAL_Delay(1); // SF 2020-08-12 Does this really need to be so long?
+		HAL_IWDG_Refresh(&hiwdg);
 		//osSemaphoreAcquire(messageI2C1_LockHandle, osWaitForever);
 		count++;
 	}
@@ -873,7 +888,7 @@ uint16_t Adafruit_AS7341::detectFlickerHz(void) {
 bool Adafruit_AS7341::writeRegister(uint8_t mem_addr, uint8_t *val,
 		uint16_t size) {
 	if (HAL_OK
-			== HAL_I2C_Mem_Write(i2c_han, i2c_addr, mem_addr, 1, val, size, 10)) {
+			== HAL_I2C_Mem_Write(i2c_han, i2c_addr, mem_addr, 1, val, size, 100)) {
 		return true;
 	} else {
 		return false;
@@ -882,7 +897,7 @@ bool Adafruit_AS7341::writeRegister(uint8_t mem_addr, uint8_t *val,
 
 bool Adafruit_AS7341::writeRegisterByte(uint8_t mem_addr, uint8_t val) {
 	if (HAL_OK
-			== HAL_I2C_Mem_Write(i2c_han, i2c_addr, mem_addr, 1, &val, 1, 10)) {
+			== HAL_I2C_Mem_Write(i2c_han, i2c_addr, mem_addr, 1, &val, 1, 100)) {
 		return true;
 	} else {
 		return false;
@@ -898,7 +913,7 @@ uint8_t Adafruit_AS7341::modifyBitInByte(uint8_t var, uint8_t value,
 bool Adafruit_AS7341::readRegister(uint16_t mem_addr, uint8_t *dest,
 		uint16_t size) {
 	if (HAL_OK
-			== HAL_I2C_Mem_Read(i2c_han, i2c_addr, mem_addr, 1, dest, size, 10)) {
+			== HAL_I2C_Mem_Read(i2c_han, i2c_addr, mem_addr, 1, dest, size, 100)) {
 		return true;
 	} else {
 		return false;
@@ -931,7 +946,9 @@ bool Adafruit_AS7341::modifyRegisterMultipleBit(uint16_t reg, uint8_t value,
 }
 
 uint8_t Adafruit_AS7341::readRegisterByte(uint16_t mem_addr) {
-	uint8_t data;
-	HAL_I2C_Mem_Read(i2c_han, i2c_addr, mem_addr, 1, &data, 1, 10);
+	uint8_t data = 0;
+	if (HAL_OK != HAL_I2C_Mem_Read(i2c_han, i2c_addr, mem_addr, 1, &data, 1, 100)) {
+		return 0; // Trả về 0 nếu I2C lỗi
+	}
 	return data;
 }
